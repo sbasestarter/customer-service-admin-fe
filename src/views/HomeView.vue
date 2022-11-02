@@ -1,18 +1,27 @@
 <template>
-  <div class="home">
-    <img alt="Vue logo" src="../assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js App"/>
+  <div class="home home4h">
+    <a-row>
+      <a-col :xs="24" :sm="24" :md="12" :xl="10">
+        <TalkLeft />
+      </a-col>
+      <a-col :xs="24" :sm="24" :md="12" :xl="14">
+        <TalkRight />
+      </a-col>
+    </a-row>
+
   </div>
 </template>
 
 <script>
 // @ is an alias to /src
-import HelloWorld from '@/components/HelloWorld.vue'
+import TalkLeft from '@/components/TalkLeft.vue'
+import TalkRight from '@/components/TalkRight.vue'
 
 export default {
   name: 'HomeView',
   components: {
-    HelloWorld
+    TalkLeft,
+    TalkRight
   }
 }
 </script>
