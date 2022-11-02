@@ -3,7 +3,7 @@
     <a-collapse-panel key="1" header="处理中的会话">
       <a-list item-layout="horizontal" :data-source="data" style="text-align: left">
         <template #renderItem="{ item }">
-          <a-list-item @click="selectTalk({ item })" :style="{ 'background': activatedTalkID === item.id ? 'yellow': ''}">
+          <a-list-item @click="selectTalk({ item })" :style="{ 'background': activatedTalkID === item.id ? '#ffff80': ''}">
             <template #actions>
               <a-button type="primary" shape="round" size="large" @click="releaseTalk(item, $event)">
                 <template #icon>
@@ -34,7 +34,7 @@
 </template>
 
 <script>
-import { defineComponent, ref, watch } from 'vue';
+import { defineComponent, ref, watch, getCurrentInstance } from 'vue';
 export default defineComponent({
   setup() {
     const text = `A dog is a type of domesticated animal.Known for its loyalty and faithfulness,it can be found as a welcome guest in many households across the world.`;
@@ -48,11 +48,16 @@ export default defineComponent({
       e.stopPropagation()
     }
 
+
+    const instance = getCurrentInstance();
+    const _this= instance.appContext.config.globalProperties;
+
     let activatedTalkID = ref('');
 
     const selectTalk = (item) => {
       activatedTalkID.value = item.item.id;
       console.log("---------------"+item.item.title)
+      _this.$api.test();
     }
 
     return {
