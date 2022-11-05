@@ -9,7 +9,7 @@
         </a-col>
         <a-col :xs="4" v-if="!right_align"></a-col>
       </a-row>
-      <a-image :width="200" :src="talk_image"></a-image>
+      <a-image :width="200" :src="image"></a-image>
     </div>
 
   </div>
@@ -33,9 +33,7 @@ export default {
     const style = "text-align: " + props.position;
     const panel_class = props.position + "-panel";
     const right_align = props.position === "right";
-    const talk_image = props.image === "" ? "https://zos.alipayobjects.com/rmsportal/jkjgkEfvpUPVyRjUImniVslZfWPnJuuZ.png" : props.image;
-
-    return { style, panel_class, right_align, talk_image };
+    return { style, panel_class, right_align };
   }
 }
 </script>

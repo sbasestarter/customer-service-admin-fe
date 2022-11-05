@@ -1,14 +1,7 @@
 <template>
   <div class="talk-right talk4h">
-    <TalkMessage position="left" at="顿如 2022-11-01 18:50:00" message="有一个姑娘，她有一些任性，她还有一些张狂"/>
-    <TalkMessage at="顿如 2022-11-01 18:50:00" message="有一个姑娘，她有一些任性，她还有一些张狂.有一个姑娘，她有一些任性，她还有一些张狂.有一个姑娘，她有一些任性，她还有一些张狂.有一个姑娘，她有一些任性，她还有一些张狂"/>
-    <TalkMessage position="left" at="顿如 2022-11-01 18:50:00" message="有一个姑娘，她有一些任性，她还有一些张狂"/>
-    <TalkMessage position="left" at="顿如 2022-11-01 18:50:00" message="有一个姑娘，她有一些任性，她还有一些张狂"/>
-    <TalkMessage position="left" at="顿如 2022-11-01 18:50:00" message="有一个姑娘，她有一些任性，她还有一些张狂"/>
-    <TalkMessage position="left" at="顿如 2022-11-01 18:50:00" message="有一个姑娘，她有一些任性，她还有一些张狂"/>
-    <TalkMessage position="left" at="顿如 2022-11-01 18:50:00" message="有一个姑娘，她有一些任性，她还有一些张狂"/>
-    <TalkMessage position="left" at="顿如 2022-11-01 18:50:00" message="有一个姑娘，她有一些任性，她还有一些张狂"/>
-    <TalkMessage v-for="message in messages"  :image="message.image" :key="message.image" position="left" at="顿如 2022-11-01 18:50:00" message="，，"></TalkMessage>
+    <TalkMessage v-for="message in messagesIn" :key="message.at" :position="messagePosition(message)" :at="messageTitle(message)"
+                 :message="message.text" :image="message.image" />
 
     <a-comment>
       <template #avatar>
@@ -51,13 +44,22 @@
 <script>
 import TalkMessage from "@/components/TalkMessage";
 
-import { ref } from 'vue';
+import {inject, ref} from 'vue';
 
 export default {
   components: {
     TalkMessage,
   },
-  setup() {
+  props: {
+    talkId: String,
+    messagesIn: {
+      type:Array,
+      default:()=> []
+    },
+  },
+  setup(props) {
+    const fnSendMessage = inject('SendMessage')
+
     const comments = ref([]);
     const submitting = ref(false);
     const value = ref('');
@@ -67,27 +69,14 @@ export default {
         return;
       }
 
-      submitting.value = true;
-      setTimeout(() => {
-        submitting.value = false;
-        value.value = '';
-      }, 1000);
+      fnSendMessage(props.talkId, value.value, "")
     };
 
-    let messages = ref([
-      {
-        image: 'https://zos.alipayobjects.com/rmsportal/jkjgkEfvpUPVyRjUImniVslZfWPnJuuZ.png',
-      }
-    ]);
 
     const readAndUpload = (file) => {
       const reader = new FileReader();
       reader.onload = function(e) {
-        console.log(e.target.result)
-        console.log(messages.value.length)
-        messages.value.push({
-          image: e.target.result,
-        })
+        fnSendMessage(props.talkId, "", e.target.result)
       };
       reader.readAsDataURL(file);
     }
@@ -109,7 +98,15 @@ export default {
 
     const beforeUpload = file => {
       readAndUpload(file)
-    };
+    }
+
+    const messagePosition = message => {
+      return message.customerMessage ? "left" : "right"
+    }
+
+    const messageTitle = message => {
+      return message.user + " " + new Date(message.at * 1000)
+    }
 
     return {
       comments,
@@ -118,7 +115,8 @@ export default {
       handleSubmit,
       fileChange,
       beforeUpload,
-      messages,
+      messagePosition,
+      messageTitle,
     };
   }
 }

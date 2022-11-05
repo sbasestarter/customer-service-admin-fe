@@ -18,4 +18,3 @@ Object.keys(antIcons).forEach(key => {
 app.config.globalProperties.$antIcons = antIcons
 app.config.globalProperties.$api = api
 
-
