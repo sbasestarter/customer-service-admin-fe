@@ -1,5 +1,5 @@
 <template>
-  <div class="talk-right talk4h">
+  <div class="talk-right talk4h" ref="messageContainer">
     <TalkMessage v-for="message in messagesIn" :key="message.at" :position="messagePosition(message)" :at="messageTitle(message)"
                  :message="message.text" :image="message.image" />
 
@@ -32,7 +32,7 @@
           </a-row>
         </a-form-item>
         <a-form-item>
-          <a-button html-type="submit" :loading="submitting" type="primary" @click="handleSubmit">
+          <a-button type="primary" @click="handleSubmit">
             Add Comment
           </a-button>
         </a-form-item>
@@ -44,7 +44,7 @@
 <script>
 import TalkMessage from "@/components/TalkMessage";
 
-import {inject, ref} from 'vue';
+import {inject, ref, watch, nextTick } from 'vue';
 
 export default {
   components: {
@@ -58,6 +58,8 @@ export default {
     },
   },
   setup(props) {
+    const messageContainer = ref()
+
     const fnSendMessage = inject('SendMessage')
 
     const comments = ref([]);
@@ -70,6 +72,7 @@ export default {
       }
 
       fnSendMessage(props.talkId, value.value, "")
+      value.value = ""
     };
 
 
@@ -108,6 +111,11 @@ export default {
       return message.user + " " + new Date(message.at * 1000)
     }
 
+    watch(() =>props.messagesIn, async () => {
+      await nextTick()
+      messageContainer.value.scrollTo({top: messageContainer.value.scrollHeight, behavior: 'smooth'});
+    });
+
     return {
       comments,
       submitting,
@@ -117,6 +125,7 @@ export default {
       beforeUpload,
       messagePosition,
       messageTitle,
+      messageContainer,
     };
   }
 }
