@@ -1,11 +1,19 @@
 export default class SocketService {
-  static instance = null;
-  static get Instance() {
-    if (!this.instance) {
-      this.instance = new SocketService();
+  static servicerInstance = null;
+  static get ServicerInstance() {
+    if (!this.servicerInstance) {
+      this.servicerInstance = new SocketService();
     }
-    return this.instance;
+    return this.servicerInstance;
   }
+  static customerInstance = null;
+  static get CustomerInstance() {
+    if (!this.customerInstance) {
+      this.customerInstance = new SocketService();
+    }
+    return this.customerInstance;
+  }
+
   // 和服务端连接的socket对象
   ws = null;
   // 存储回调函数
@@ -16,18 +24,25 @@ export default class SocketService {
   sendRetryCount = 0;
   // 重新连接尝试的次数
   connectRetryCount = 0;
+  //
+  wsUrl = '';
+  token = '';
   //  定义连接服务器的方法
-  connect() {
+  connect(wsUrl, token) {
+    this.wsUrl = wsUrl;
+    this.token = token;
+
     // 连接服务器
     if (!window.WebSocket) {
       return console.log('您的浏览器不支持WebSocket');
     }
     // let token = $.cookie('123');
     // let token = '4E6EF539AAF119D82AC4C2BC84FBA21F';
-    let url = 'ws://localhost:12223/ws';
-
     // remove hey param?
-    this.ws = new WebSocket(url); // https://stackoverflow.com/questions/58417479/sec-websocket-protocol-issues
+    if (this.ws) {
+      this.ws.close()
+    }
+    this.ws = new WebSocket(wsUrl); // https://stackoverflow.com/questions/58417479/sec-websocket-protocol-issues
     this.ws.binaryType = "arraybuffer";
     // 连接成功的事件
     this.ws.onopen = () => {
@@ -35,6 +50,11 @@ export default class SocketService {
       this.connected = true;
       // 重置重新连接的次数
       this.connectRetryCount = 0;
+      const autoInfo = JSON.stringify({
+        'token': this.token,
+      });
+      console.log("ws auth:", autoInfo)
+      this.send(autoInfo)
     };
     // 1.连接服务端失败
     // 2.当连接成功之后, 服务器关闭的情况
@@ -43,7 +63,7 @@ export default class SocketService {
       this.connected = false;
       this.connectRetryCount++;
       setTimeout(() => {
-        this.connect();
+        this.connect(this.wsUrl);
       }, 500 * this.connectRetryCount);
     };
     // 得到服务端发送过来的数据

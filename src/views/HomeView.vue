@@ -74,11 +74,11 @@ export default {
     }
 
     const data = reactive({
-      socketServe: SocketService.Instance,
+      socketServe: SocketService.ServicerInstance,
     })
     //SocketService.Instance.connect();
-    data.socketServe = SocketService.Instance;
-    data.socketServe.connect()
+    data.socketServe = SocketService.ServicerInstance;
+    data.socketServe.connect('ws://localhost:13222/ws', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MTg1MjI3MTAxOTQxNTMwNjI0MCwiVXNlck5hbWUiOiJoaCIsImV4cCI6MTY3MDY1NTIwN30.DfHIVTyt7eJ9TEVKG1JM05cLqTf2dZz8VCqNeJG3HA4')
     data.socketServe.registerCallBack('message', (message) => {
       const resp = ServiceResponse.deserializeBinary(message.data)
       if (resp.getTalks() != null) {

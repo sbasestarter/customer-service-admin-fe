@@ -1,0 +1,56 @@
+<head>
+<style type="text/css">
+.float-button {
+position: fixed;
+height: 90px;
+width: 40px;
+bottom: 90px;
+right: 50px;
+background: #b4d145;
+}
+.float-talk {
+position: fixed;
+height: 70%;
+width: 50%;
+bottom: 190px;
+right: 50px;
+background: #b4d145;
+}
+</style>
+<script type="text/javascript">
+window.addEventListener('message',(e) => {
+  if (e.data['target'] === 'customer') {
+    if (e.data['token']) {
+      window.localStorage.setItem('talkToken', e.data['token'])
+    }
+  }
+})
+
+function talkButtonClicked() {
+  if(document.getElementById("talk").style.display==="none"){
+    document.getElementById("talk").style.display="block";
+  }else{
+    document.getElementById("talk").style.display="none";
+  }
+}
+
+function load() {
+  const iframe = document.getElementById('talk');
+  iframe.contentWindow.postMessage({
+    target: 'customer',
+    token: window.localStorage.getItem('talkToken')
+  }, 'http://localhost:8080')
+}
+
+</script>
+</head>
+<body onload="load()">
+<div class="main-container">
+<div class="main-content"> //网页的主要内容
+</div>
+<iframe id="talk" src="http://localhost:8080/customer" class="float-talk">
+</iframe>
+<button type="button" class="float-button" onclick="talkButtonClicked()">
+</div>
+</div>
+</body>
