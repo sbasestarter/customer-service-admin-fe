@@ -5,7 +5,7 @@
         <TalkLeft :pending-talks="pendingTalks" :talks="talks" @activeTalkChanged="activeTalkChanged" />
       </a-col>
       <a-col :xs="24" :sm="24" :md="12" :xl="14">
-        <TalkRight :talk-id="activatedTalkId" :messages-in="activatedTalkMessages" />
+        <TalkRight :talk-id="activatedTalkId" :messages-in="activatedTalkMessages" :customer-mode="false" />
       </a-col>
     </a-row>
 
@@ -24,6 +24,7 @@ import {
   ServiceAttachRequest,
   ServiceDetachRequest, ServicePostMessage, TalkMessageW
 } from "../../js/customer_talk_service_pb";
+import {useStore} from "vuex";
 
 export default {
   name: 'HomeView',
@@ -32,6 +33,8 @@ export default {
     TalkRight
   },
   setup() {
+    const store = useStore();
+
     let pendingTalks = ref([])
     let talks = ref([]);
 
@@ -73,28 +76,51 @@ export default {
       pendingTalks.value.push(talkInfo)
     }
 
+    const calcLastMessage = (messageObject) => {
+      let lastCustomerMessage = '';
+
+      if (messageObject.customerMessage) {
+        if (messageObject.text !== '') {
+          lastCustomerMessage = messageObject.text;
+        } else {
+          lastCustomerMessage = '<图片>'
+        }
+      } else {
+        lastCustomerMessage = '等待客户反馈'
+      }
+
+      return lastCustomerMessage;
+    }
+
     const data = reactive({
       socketServe: SocketService.ServicerInstance,
     })
     //SocketService.Instance.connect();
     data.socketServe = SocketService.ServicerInstance;
-    data.socketServe.connect('ws://localhost:13222/ws', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MTg1MjI3MTAxOTQxNTMwNjI0MCwiVXNlck5hbWUiOiJoaCIsImV4cCI6MTY3MDY1NTIwN30.DfHIVTyt7eJ9TEVKG1JM05cLqTf2dZz8VCqNeJG3HA4')
+    data.socketServe.connect('ws://localhost:13222/ws', store.getters.servicerToken)
     data.socketServe.registerCallBack('message', (message) => {
       const resp = ServiceResponse.deserializeBinary(message.data)
       if (resp.getTalks() != null) {
         talks.value = [];
         resp.getTalks().getTalksList().forEach(function (item) {
           let messages = []
+          let lastCustomerMessage = '';
+
           item.getMessagesList().forEach(function (message) {
             const messageObject = message.toObject();
             if (messageObject.image.length > 0) {
               messageObject.image = atob(String(messageObject.image))
             }
+
+            lastCustomerMessage = calcLastMessage(messageObject)
+
             messages.push(messageObject)
           })
           talks.value.push({
             ...item.getTalkInfo().toObject(),
             messages: messages,
+            lastCustomerMessage: lastCustomerMessage,
+            unreadMessageCount: 0,
           })
         })
       } else if (resp.getPendingTalks() != null) {
@@ -128,6 +154,11 @@ export default {
             const messageObject = resp.getMessage().getMessage().toObject();
             if (messageObject.image.length > 0) {
               messageObject.image = atob(String(messageObject.image))
+            }
+
+            talks.value[idx].lastCustomerMessage = calcLastMessage(messageObject)
+            if (talks.value[idx].talkId !== activatedTalkId.value) {
+              talks.value[idx].unreadMessageCount++
             }
             talks.value[idx].messages.push(messageObject)
           }
@@ -165,6 +196,7 @@ export default {
 
       talks.value.forEach(function (item) {
         if (item.talkId === talkId) {
+          item.unreadMessageCount = 0
           activatedTalkMessages.value = item.messages;
         }
       })

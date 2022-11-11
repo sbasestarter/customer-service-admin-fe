@@ -3,6 +3,7 @@
     <template #renderItem="{ item }">
       <a-list-item @click="selectTalk({ item })" :style="{ 'background': activatedTalk === item.talkId ? '#ffff80': ''}">
         <template #actions>
+          <a-badge :count="item.unreadMessageCount" />
           <a-button v-if="!pendingFlag" type="primary" shape="round" size="large" @click="unlockTalk(item, $event)">
             <template #icon>
               <StopOutlined />
@@ -15,13 +16,12 @@
             </template>
             开始处理
           </a-button>
-          <a-badge count="25" />
         </template>
         <a-list-item-meta
-            :description="item.title"
+            :description="item.lastCustomerMessage"
         >
           <template #title>
-            <div>{{  new Date(item.startedAt*1000) }}</div>
+            <div>{{  new Date(item.startedAt*1000) }} {{ item.title }}</div>
           </template>
           <template #avatar>
             <a-avatar src="https://joeschmoe.io/api/v1/random" />

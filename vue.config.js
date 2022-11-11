@@ -11,6 +11,15 @@ module.exports = defineConfig({
           "^/api": ""
         },
         "secure": false
+      },
+      "/servicerapi": {
+        target: "http://127.0.0.1:13222",
+        changeOrigin: true,
+        ws: false,
+        pathRewrite: {
+          "^/servicerapi": ""
+        },
+        "secure": false
       }
     }
   }

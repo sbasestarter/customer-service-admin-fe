@@ -14,37 +14,32 @@ export default class SocketService {
     return this.customerInstance;
   }
 
-  // 和服务端连接的socket对象
   ws = null;
-  // 存储回调函数
   callBackMapping = {};
-  // 标识是否连接成功
   connected = false;
-  // 记录重试的次数
   sendRetryCount = 0;
-  // 重新连接尝试的次数
   connectRetryCount = 0;
+
   //
   wsUrl = '';
   token = '';
-  //  定义连接服务器的方法
+
   connect(wsUrl, token) {
     this.wsUrl = wsUrl;
     this.token = token;
 
-    // 连接服务器
     if (!window.WebSocket) {
       return console.log('您的浏览器不支持WebSocket');
     }
-    // let token = $.cookie('123');
-    // let token = '4E6EF539AAF119D82AC4C2BC84FBA21F';
-    // remove hey param?
+
     if (this.ws) {
-      this.ws.close()
+      return
     }
+
     this.ws = new WebSocket(wsUrl); // https://stackoverflow.com/questions/58417479/sec-websocket-protocol-issues
     this.ws.binaryType = "arraybuffer";
-    // 连接成功的事件
+
+    console.log('开始连接服务端');
     this.ws.onopen = () => {
       console.log('连接服务端成功了');
       this.connected = true;
@@ -56,16 +51,21 @@ export default class SocketService {
       console.log("ws auth:", autoInfo)
       this.send(autoInfo)
     };
-    // 1.连接服务端失败
-    // 2.当连接成功之后, 服务器关闭的情况
+
     this.ws.onclose = () => {
-      console.log('连接服务端失败');
+      console.log('连接服务端失败了');
       this.connected = false;
       this.connectRetryCount++;
+      this.ws.close();
+      this.ws = null;
       setTimeout(() => {
-        this.connect(this.wsUrl);
+        this.connect(this.wsUrl, this.token);
       }, 500 * this.connectRetryCount);
     };
+
+    this.ws.onerror = () => {
+      console.log('连接服务端失败了222444444444444');
+    }
     // 得到服务端发送过来的数据
     this.ws.onmessage = msg => {
       const cb =  this.callBackMapping[msg.type];

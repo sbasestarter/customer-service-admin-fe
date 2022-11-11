@@ -1,11 +1,14 @@
 <template>
   <div>Hi, {{ userName }}</div>
   <div>
-    <TalkRight v-if="userName !== null" :talk-id="talkId" :messages-in="messages" />
+    <TalkRight v-if="userName !== null" :talk-id="talkId" :messages-in="messages" :customer-mode="true" />
     <e-row v-else>
       <a-form>
-        <a-form-item label="Username" name="username">
+        <a-form-item label="您的称呼" name="username">
           <a-input v-model:value="formState.username" />
+        </a-form-item>
+        <a-form-item label="问题描述" name="title">
+          <a-input v-model:value="formState.title" />
         </a-form-item>
         <a-form-item>
           <a-button type="primary" @click="createToken">Submit</a-button>
@@ -110,7 +113,6 @@ export default {
             'token': pbResp.getNewToken(),
             target: 'customer',
           }, '*')
-          console.log("^^^^^^^^^^^^^^^^^^^^^^:", "checkTokenResp")
           startTalk()
         }
       }).catch(e => {
@@ -148,6 +150,7 @@ export default {
 
     const formState = reactive({
       username: '',
+      title: '',
     });
 
     const startTalk = () => {
@@ -170,7 +173,7 @@ export default {
           console.log('open ...')
         } else {
           const create = new TalkCreateRequest();
-          create.setTitle(".");
+          create.setTitle(formState.title);
           const req = new TalkRequest();
           req.setCreate(create);
           data.socketServe.send(req.serializeBinary().buffer)

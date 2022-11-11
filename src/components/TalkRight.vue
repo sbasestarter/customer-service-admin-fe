@@ -56,6 +56,7 @@ export default {
       type:Array,
       default:()=> []
     },
+    customerMode: Boolean,
   },
   setup(props) {
     const messageContainer = ref()
@@ -104,6 +105,10 @@ export default {
     }
 
     const messagePosition = message => {
+      if (props.customerMode) {
+        return message.customerMessage ? "right" : "left";
+      }
+
       return message.customerMessage ? "left" : "right"
     }
 
@@ -111,10 +116,11 @@ export default {
       return message.user + " " + new Date(message.at * 1000)
     }
 
-    watch(() =>props.messagesIn, async () => {
+    watch(() => props.messagesIn, async () => {
+      console.log("messagesIn chagned")
       await nextTick()
       messageContainer.value.scrollTo({top: messageContainer.value.scrollHeight, behavior: 'smooth'});
-    });
+    }, {deep:true});
 
     return {
       comments,
