@@ -1,5 +1,5 @@
 <template>
-  <div class="talk-right talk4h" ref="messageContainer">
+  <perfect-scrollbar class="talk-right talk4h" ref="messageContainer">
     <TalkMessage v-for="message in messagesIn" :key="message.at" :position="messagePosition(message)" :at="messageTitle(message)"
                  :message="message.text" :image="message.image" />
 
@@ -34,7 +34,7 @@
         </a-form-item>
       </template>
     </a-comment>
-  </div>
+  </perfect-scrollbar>
 </template>
 
 <script>

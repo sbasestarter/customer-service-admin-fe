@@ -7,11 +7,13 @@ import * as antIcons from "@ant-design/icons-vue"
 import * as api from '@/api/api'
 import axios from '@/api/axios.js'
 import moment from "moment";
+import PerfectScrollbar from 'vue3-perfect-scrollbar'
+import 'vue3-perfect-scrollbar/dist/vue3-perfect-scrollbar.css'
 
 const app = createApp(App)
 app.use(Button).use(Switch).use(Collapse).use(List).use(Avatar).use(Image).use(Comment).use(Input).use(Form).use(Upload)
   .use(Row).use(Col)
-  .use(Badge).use(store).use(router).mount('#app')
+  .use(Badge).use(store).use(router).use(PerfectScrollbar).mount('#app')
 
 Object.keys(antIcons).forEach(key => {
   app.component(key, antIcons[key])
