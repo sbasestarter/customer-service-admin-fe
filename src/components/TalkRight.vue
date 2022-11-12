@@ -12,8 +12,7 @@
           <a-row>
             <a-col :xs="24" :sm="24" :md="18" :xl="18">
               <a-textarea class="message" v-model:value="message" :rows="4" @paste="fileChange" draggable="true" v-focus
-                          @keydown.enter="handleEnter"
-                          @keydown.alt.enter="handleAltEnter" />
+                          ref="messageInput" @keydown.enter="handleEnter" />
             </a-col>
             <a-col :xs="24" :sm="24" :md="6" :xl="6">
               <a-upload-dragger
@@ -56,6 +55,7 @@ export default {
   },
   setup(props) {
     const messageContainer = ref()
+    const messageInput = ref();
 
     const fnSendMessage = inject('SendMessage')
 
@@ -114,45 +114,37 @@ export default {
     }
 
     watch(() => props.messagesIn, async () => {
-      console.log("messagesIn chagned")
       await nextTick()
-      messageContainer.value.scrollTo({top: messageContainer.value.scrollHeight, behavior: 'smooth'});
+      messageContainer.value.$el.scrollTo({top: messageContainer.value.$el.scrollHeight});
+      messageInput.value.focus()
     }, {deep:true});
 
 
     const message = ref('');
-    const isAltEnter = ref(false);
-
-
-    const handleAltEnter = (e) => {
-      const blurIndex = e.srcElement.selectionStart;
-      message.value = message.value.substring(0, blurIndex) + '\n' + message.value.substring(blurIndex, message.value.length)
-      isAltEnter.value = true
-    }
 
     const handleEnter = (e) => {
-      e.preventDefault()
+      if (e.altKey) {
+        const blurIndex = e.srcElement.selectionStart;
+        message.value = message.value.substring(0, blurIndex) + '\n' + message.value.substring(blurIndex, message.value.length)
 
-      setTimeout(() => {
-        if (isAltEnter.value) {
-          isAltEnter.value = false
-        }else{
-          handleSubmit()
-        }
-      }, 100)
+        return
+      }
+
+      e.preventDefault()
+      handleSubmit()
     }
 
     return {
       comments,
       submitting,
       message,
-      handleAltEnter,
       handleEnter,
       fileChange,
       beforeUpload,
       messagePosition,
       messageTitle,
       messageContainer,
+      messageInput,
     };
   }
 }
