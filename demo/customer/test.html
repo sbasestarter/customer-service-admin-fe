@@ -16,6 +16,8 @@ bottom: 190px;
 right: 50px;
 background: #b4d145;
 }
+#btn{width: 80px;height: 80px;border-radius: 10%;
+ box-shadow: 11px 7px 10px 1px rgb(0 0 0 / 50%);}
 </style>
 <script type="text/javascript">
 window.addEventListener('message',(e) => {
@@ -27,19 +29,41 @@ window.addEventListener('message',(e) => {
 })
 
 function talkButtonClicked() {
-  if(document.getElementById("talk").style.display==="none"){
-    document.getElementById("talk").style.display="block";
+  const iframe = document.getElementById('talk');
+  if(iframe.style.display==="none"){
+    iframe.style.display="block";
+    iframe.src = iframe.src
+    console.log("**************")
   }else{
-    document.getElementById("talk").style.display="none";
+    iframe.style.display="none";
   }
 }
 
 function load() {
   const iframe = document.getElementById('talk');
+  const sendTalkToken = () => {
+    iframe.contentWindow.postMessage({
+      target: 'customer',
+      token: window.localStorage.getItem('talkToken')
+    }, 'http://localhost:8081')
+  }
+
   iframe.contentWindow.postMessage({
     target: 'customer',
     token: window.localStorage.getItem('talkToken')
-  }, 'http://localhost:8080')
+  }, 'http://localhost:8081')
+
+  if (iframe.attachEvent) { // IE
+    iframe.onreadystatechange = () => {
+      if (iframe.readystate == 'complete') {
+        sendTalkToken()
+      }
+    }
+  }
+  iframe.onload = () => {
+    sendTalkToken()
+  }
+
 }
 
 </script>
@@ -48,9 +72,9 @@ function load() {
 <div class="main-container">
 <div class="main-content"> //网页的主要内容
 </div>
-<iframe id="talk" src="http://localhost:8080/customer" class="float-talk">
+<iframe id="talk" src="http://localhost:8081/customer" class="float-talk">
 </iframe>
-<button type="button" class="float-button" onclick="talkButtonClicked()">
+<button type="button" id="btn" class="float-button" onclick="talkButtonClicked()">客服</button>
 </div>
 </div>
 </body>

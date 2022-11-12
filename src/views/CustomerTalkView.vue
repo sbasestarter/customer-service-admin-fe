@@ -34,6 +34,7 @@ import {
   TalkResponse,
 } from "../../js/customer_talk_service_pb";
 import SocketService from "@/api/websocket";
+import {notification} from "ant-design-vue";
 
 export default {
   name: 'HomeView',
@@ -41,6 +42,15 @@ export default {
     TalkRight
   },
   setup() {
+    const socketNotificationKey = 'wsNotification';
+    const openNotification = (message) => {
+      notification.open({
+        socketNotificationKey,
+        message: '会话通道状态改变',
+        description: message,
+      });
+    };
+
     let token = ref('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MTg1MjI3MTAxOTQxNTMwNjI0MCwiVXNlck5hbWUiOiJoaCIsImV4cCI6MTY3MDY1MzY3M30.clrY5X8b5aIgX-wjAORqnEJu8U50pI-n37FKvnAdJes');
     const userName = ref(null);
     const talkId = ref('');
@@ -82,7 +92,7 @@ export default {
       req.setUserName(formState.username);
       _this.$axios({
         method: "post",
-        url: "/api/createToken",
+        url: process.env.VUE_APP_URL_BASE_CUSTOMER+"/createToken",
         data: req.serializeBinary().buffer,
       }).then((resp)=> {
         const pbResp = CreateTokenResponse.deserializeBinary(resp.data)
@@ -102,7 +112,7 @@ export default {
         headers: {
           'token': token.value,
         },
-        url: "/api/checkToken",
+        url: process.env.VUE_APP_URL_BASE_CUSTOMER+"/checkToken",
       }).then((resp)=>{
         const pbResp = CheckTokenResponse.deserializeBinary(resp.data)
         console.log("checkToken:", pbResp.getNewToken(), pbResp.getUserName(), pbResp.getValid())
@@ -120,12 +130,20 @@ export default {
       })
     }
 
-    const data = reactive({
-      socketServe: SocketService.CustomerInstance,
+    const talkStartRequest = new TalkRequest();
+
+    const ws = reactive(new SocketService(process.env.VUE_APP_WS_CUSTOMER, ''));
+
+    ws.registerCallBack('open', () => {
+      openNotification('通道打开')
+      ws.send(talkStartRequest.serializeBinary().buffer)
     })
-    //SocketService.Instance.connect();
-    data.socketServe = SocketService.CustomerInstance;
-    data.socketServe.registerCallBack('message', (message) => {
+
+    ws.registerCallBack('close', () => {
+      openNotification('通道关闭')
+    })
+
+    ws.registerCallBack('message', (message) => {
       const resp = TalkResponse.deserializeBinary(message.data);
       if (resp.getMessages() != null) {
         talkId.value = resp.getMessages().getTalkId();
@@ -159,7 +177,7 @@ export default {
         headers: {
           'token': token.value,
         },
-        url: "/api/listTalk",
+        url: process.env.VUE_APP_URL_BASE_CUSTOMER+"/listTalk",
       }).then((resp)=>{
         const pbResp = QueryTalksResponse.deserializeBinary(resp.data)
         const pbTalkList = pbResp.getTalksList();
@@ -167,20 +185,16 @@ export default {
           talkId.value = pbTalkList[0].getTalkId();
           const open = new TalkOpenRequest();
           open.setTalkId(talkId.value);
-          const req = new TalkRequest();
-          req.setOpen(open);
-          data.socketServe.send(req.serializeBinary().buffer)
+          talkStartRequest.setOpen(open);
           console.log('open ...')
         } else {
           const create = new TalkCreateRequest();
           create.setTitle(formState.title);
-          const req = new TalkRequest();
-          req.setCreate(create);
-          data.socketServe.send(req.serializeBinary().buffer)
+          talkStartRequest.setCreate(create);
           console.log('create ...')
         }
-        console.log("***************************,", token.value)
-        data.socketServe.connect('ws://localhost:13221/ws', token.value)
+
+        ws.connect(token.value)
       }).catch(e => {
         console.log("eee:", e)
       })
@@ -197,7 +211,7 @@ export default {
       const request = new TalkRequest();
       request.setMessage(message);
 
-      data.socketServe.send(request.serializeBinary().buffer)
+      ws.send(request.serializeBinary().buffer)
     }
     provide('SendMessage', sendMessage)
 

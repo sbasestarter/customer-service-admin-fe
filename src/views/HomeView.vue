@@ -16,8 +16,10 @@
 // @ is an alias to /src
 import TalkLeft from '@/components/TalkLeft.vue'
 import TalkRight from '@/components/TalkRight.vue'
-import {reactive, ref, provide } from 'vue'
+import {ref, provide, reactive} from 'vue'
 import SocketService from "@/api/websocket";
+import { notification } from 'ant-design-vue';
+
 import {
   ServiceRequest,
   ServiceResponse,
@@ -33,6 +35,15 @@ export default {
     TalkRight
   },
   setup() {
+    const socketNotificationKey = 'wsNotification';
+    const openNotification = (message) => {
+      notification.open({
+        socketNotificationKey,
+        message: '会话通道状态改变',
+        description: message,
+      });
+    };
+
     const store = useStore();
 
     let pendingTalks = ref([])
@@ -92,13 +103,18 @@ export default {
       return lastCustomerMessage;
     }
 
-    const data = reactive({
-      socketServe: SocketService.ServicerInstance,
+    const ws = reactive(new SocketService(process.env.VUE_APP_WS_SERVICER, store.getters.servicerToken));
+    ws.startConnect()
+
+    ws.registerCallBack('open', () => {
+      openNotification('通道打开')
     })
-    //SocketService.Instance.connect();
-    data.socketServe = SocketService.ServicerInstance;
-    data.socketServe.connect('ws://localhost:13222/ws', store.getters.servicerToken)
-    data.socketServe.registerCallBack('message', (message) => {
+
+    ws.registerCallBack('close', () => {
+      openNotification('通道关闭')
+    })
+
+    ws.registerCallBack('message', (message) => {
       const resp = ServiceResponse.deserializeBinary(message.data)
       if (resp.getTalks() != null) {
         talks.value = [];
@@ -173,7 +189,7 @@ export default {
       const attach = new ServiceAttachRequest()
       attach.setTalkId(item.talkId);
       request.setAttach(attach);
-      data.socketServe.send(request.serializeBinary().buffer)
+      ws.send(request.serializeBinary().buffer)
     }
 
     provide('LockTalk', lockTalk)
@@ -183,7 +199,7 @@ export default {
       const detach = new ServiceDetachRequest()
       detach.setTalkId(item.talkId);
       request.setDetach(detach);
-      data.socketServe.send(request.serializeBinary().buffer)
+      ws.send(request.serializeBinary().buffer)
     }
     provide('UnlockTalk', unlockTalk)
 
@@ -217,7 +233,7 @@ export default {
       const request = new ServiceRequest();
       request.setMessage(postMessage);
 
-      data.socketServe.send(request.serializeBinary().buffer)
+      ws.send(request.serializeBinary().buffer)
     }
     provide('SendMessage', sendMessage)
 

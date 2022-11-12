@@ -5,7 +5,7 @@
       <a-row>
         <a-col :xs="4" v-if="right_align"></a-col>
         <a-col :xs="20">
-          <div class="message">{{ message }}</div>
+          <pre v-html="message" />
         </a-col>
         <a-col :xs="4" v-if="!right_align"></a-col>
       </a-row>
@@ -40,7 +40,7 @@ export default {
 
 <style scoped>
 .tm {
-  color: green;
+  color: darkblue;
 }
 
 .left-panel {
@@ -51,7 +51,4 @@ export default {
   margin-right: 20px;
 }
 
-.message {
-
-}
 </style>

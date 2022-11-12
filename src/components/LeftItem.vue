@@ -21,7 +21,7 @@
             :description="item.lastCustomerMessage"
         >
           <template #title>
-            <div>{{  new Date(item.startedAt*1000) }} {{ item.title }}</div>
+            <div>{{ item.customerName}}: {{ item.title }}</div>
           </template>
           <template #avatar>
             <a-avatar src="https://joeschmoe.io/api/v1/random" />

@@ -15,6 +15,7 @@
     "core-js": "^3.8.3",
     "google-protobuf": "^3.21.2",
     "grpc-web": "^1.4.2",
+    "moment": "^2.29.4",
     "ts-protoc-gen": "^0.15.0",
     "vue": "^3.2.13",
     "vue-router": "^4.0.3",

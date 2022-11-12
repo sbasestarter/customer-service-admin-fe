@@ -34,7 +34,7 @@ export default {
     const doLogin = () => {
       _this.$axios({
         method: "post",
-        url: "/servicerapi/login",
+        url: process.env.VUE_APP_URL_BASE_SERVICER+"/login",
         responseType: 'json',
         data: {
           'user_name': formState.username,

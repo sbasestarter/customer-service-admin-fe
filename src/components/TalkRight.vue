@@ -11,7 +11,9 @@
         <a-form-item>
           <a-row>
             <a-col :xs="24" :sm="24" :md="18" :xl="18">
-              <a-textarea class="message" v-model:value="value" :rows="4" @paste="fileChange" draggable="true" />
+              <a-textarea class="message" v-model:value="message" :rows="4" @paste="fileChange" draggable="true" v-focus
+                          @keydown.enter="handleEnter"
+                          @keydown.alt.enter="handleAltEnter" />
             </a-col>
             <a-col :xs="24" :sm="24" :md="6" :xl="6">
               <a-upload-dragger
@@ -22,19 +24,13 @@
                 <p class="ant-upload-drag-icon">
                   <inbox-outlined></inbox-outlined>
                 </p>
-                <p class="ant-upload-text">Click or drag file to this area to upload</p>
+                <p class="ant-upload-text">上传图片</p>
                 <p class="ant-upload-hint">
-                  Support for a single or bulk upload. Strictly prohibit from uploading company data or other
-                  band files
+                  点击或者拖动图片到此
                 </p>
               </a-upload-dragger>
             </a-col>
           </a-row>
-        </a-form-item>
-        <a-form-item>
-          <a-button type="primary" @click="handleSubmit">
-            Add Comment
-          </a-button>
         </a-form-item>
       </template>
     </a-comment>
@@ -44,7 +40,7 @@
 <script>
 import TalkMessage from "@/components/TalkMessage";
 
-import {inject, ref, watch, nextTick } from 'vue';
+import {inject, ref, watch, nextTick, getCurrentInstance} from 'vue';
 
 export default {
   components: {
@@ -65,15 +61,14 @@ export default {
 
     const comments = ref([]);
     const submitting = ref(false);
-    const value = ref('');
 
     const handleSubmit = () => {
-      if (!value.value) {
+      if (!message.value) {
         return;
       }
 
-      fnSendMessage(props.talkId, value.value, "")
-      value.value = ""
+      fnSendMessage(props.talkId, message.value, "")
+      message.value = ""
     };
 
 
@@ -104,7 +99,7 @@ export default {
       readAndUpload(file)
     }
 
-    const messagePosition = message => {
+    const messagePosition = (message) => {
       if (props.customerMode) {
         return message.customerMessage ? "right" : "left";
       }
@@ -112,8 +107,10 @@ export default {
       return message.customerMessage ? "left" : "right"
     }
 
+    const {proxy} = getCurrentInstance()
+
     const messageTitle = message => {
-      return message.user + " " + new Date(message.at * 1000)
+      return message.user + " " + proxy.$dateFormat(new Date(message.at * 1000))
     }
 
     watch(() => props.messagesIn, async () => {
@@ -122,11 +119,35 @@ export default {
       messageContainer.value.scrollTo({top: messageContainer.value.scrollHeight, behavior: 'smooth'});
     }, {deep:true});
 
+
+    const message = ref('');
+    const isAltEnter = ref(false);
+
+
+    const handleAltEnter = (e) => {
+      const blurIndex = e.srcElement.selectionStart;
+      message.value = message.value.substring(0, blurIndex) + '\n' + message.value.substring(blurIndex, message.value.length)
+      isAltEnter.value = true
+    }
+
+    const handleEnter = (e) => {
+      e.preventDefault()
+
+      setTimeout(() => {
+        if (isAltEnter.value) {
+          isAltEnter.value = false
+        }else{
+          handleSubmit()
+        }
+      }, 100)
+    }
+
     return {
       comments,
       submitting,
-      value,
-      handleSubmit,
+      message,
+      handleAltEnter,
+      handleEnter,
       fileChange,
       beforeUpload,
       messagePosition,

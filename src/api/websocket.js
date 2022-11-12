@@ -20,14 +20,24 @@ export default class SocketService {
   sendRetryCount = 0;
   connectRetryCount = 0;
 
+  constructor(wsUrl, token) {
+    this.wsUrl = wsUrl
+    this.token = token
+  }
+
   //
   wsUrl = '';
   token = '';
 
-  connect(wsUrl, token) {
-    this.wsUrl = wsUrl;
-    this.token = token;
+  connect(token) {
+    if (token) {
+      this.token = token;
+    }
 
+    this.startConnect()
+  }
+
+  startConnect() {
     if (!window.WebSocket) {
       return console.log('您的浏览器不支持WebSocket');
     }
@@ -36,7 +46,7 @@ export default class SocketService {
       return
     }
 
-    this.ws = new WebSocket(wsUrl); // https://stackoverflow.com/questions/58417479/sec-websocket-protocol-issues
+    this.ws = new WebSocket(this.wsUrl); // https://stackoverflow.com/questions/58417479/sec-websocket-protocol-issues
     this.ws.binaryType = "arraybuffer";
 
     console.log('开始连接服务端');
@@ -50,21 +60,34 @@ export default class SocketService {
       });
       console.log("ws auth:", autoInfo)
       this.send(autoInfo)
+
+      const cb =  this.callBackMapping['open'];
+      if (cb !== undefined) {
+        cb()
+      }
     };
 
     this.ws.onclose = () => {
+      const cb =  this.callBackMapping['close'];
+      if (cb !== undefined) {
+        cb()
+      }
+
       console.log('连接服务端失败了');
       this.connected = false;
       this.connectRetryCount++;
-      this.ws.close();
-      this.ws = null;
+
+      if (this.ws.readyState === WebSocket.CLOSED) {
+        this.ws.close();
+        this.ws = null;
+      }
       setTimeout(() => {
         this.connect(this.wsUrl, this.token);
       }, 500 * this.connectRetryCount);
     };
 
-    this.ws.onerror = () => {
-      console.log('连接服务端失败了222444444444444');
+    this.ws.onerror = (e) => {
+      console.log('连接服务端失败了:', e);
     }
     // 得到服务端发送过来的数据
     this.ws.onmessage = msg => {
@@ -90,14 +113,10 @@ export default class SocketService {
       this.sendRetryCount = 0;
       try {
         this.ws.send(data);
+        console.log('send socket data:', data)
       } catch (e) {
-        this.ws.send(data);
+        console.log('send socket error:', e)
       }
-    } else {
-      this.sendRetryCount++;
-      setTimeout(() => {
-        this.send(data);
-      }, this.sendRetryCount * 500);
     }
   }
 }
