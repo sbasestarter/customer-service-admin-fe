@@ -4,7 +4,7 @@
       <a-list-item @click="selectTalk({ item })" :style="{ 'background': activatedTalk === item.talkId ? '#ffff80': ''}">
         <template #actions>
           <a-badge :count="item.unreadMessageCount" />
-          <a-button v-if="!pendingFlag" type="primary" shape="round" size="large" @click="unlockTalk(item, $event)">
+          <a-button v-if="!pendingFlag" type="primary" shape="round" size="large" @click="unlockTalk(item, $event)" :disabled="item.closedFlag">
             <template #icon>
               <StopOutlined />
             </template>

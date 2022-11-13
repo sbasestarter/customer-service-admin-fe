@@ -16,7 +16,7 @@
 // @ is an alias to /src
 import TalkLeft from '@/components/TalkLeft.vue'
 import TalkRight from '@/components/TalkRight.vue'
-import {ref, provide, reactive} from 'vue'
+import {ref, provide, reactive, onActivated, onDeactivated} from 'vue'
 import SocketService from "@/api/websocket";
 import { notification } from 'ant-design-vue';
 
@@ -27,6 +27,7 @@ import {
   ServiceDetachRequest, ServicePostMessage, TalkMessageW
 } from "../../js/customer_talk_service_pb";
 import {useStore} from "vuex";
+import {useRouter} from "vue-router";
 
 export default {
   name: 'HomeView',
@@ -44,10 +45,19 @@ export default {
       });
     };
 
-    const store = useStore();
+    //
+    //
+    //
 
-    let pendingTalks = ref([])
-    let talks = ref([]);
+    const store = useStore();
+    const router = useRouter()
+
+    //
+    //
+    //
+
+    const pendingTalks = ref([])
+    const talks = ref([]);
 
     const talkLocked = (talkId, talkInfo) => {
       for (let idx = 0; idx < pendingTalks.value.length; idx++) {
@@ -87,6 +97,22 @@ export default {
       pendingTalks.value.push(talkInfo)
     }
 
+    const talkClosed = (talkId) => {
+      for (let idx = 0; idx < talks.value.length; idx++) {
+        if (talks.value[idx].talkId === talkId) {
+          talks.value[idx].lastCustomerMessage = "用户关闭会话"
+          talks.value[idx].closedFlag = true
+
+          break
+        }
+      }
+    }
+
+
+    //
+    // websocket
+    //
+
     const calcLastMessage = (messageObject) => {
       let lastCustomerMessage = '';
 
@@ -110,8 +136,16 @@ export default {
       openNotification('通道打开')
     })
 
-    ws.registerCallBack('close', () => {
-      openNotification('通道关闭')
+    ws.registerCallBack('close', (e) => {
+      if (e.code === 16) {
+        ws.finishConnect()
+
+        router.push('/login')
+
+        return
+      }
+
+      openNotification('通道关闭. ' + e.code + ": " +e.reason)
     })
 
     ws.registerCallBack('message', (message) => {
@@ -132,10 +166,12 @@ export default {
 
             messages.push(messageObject)
           })
+
           talks.value.push({
             ...item.getTalkInfo().toObject(),
             messages: messages,
             lastCustomerMessage: lastCustomerMessage,
+            closedFlag: false,
             unreadMessageCount: 0,
           })
         })
@@ -150,7 +186,7 @@ export default {
         talkUnlocked(resp.getDetach().getTalk().toObject())
       } else if (resp.getReload() != null) {
         for (let idx=0; idx<talks.value.length; idx++) {
-          if (talks.value[idx].talkId === resp.getReload().getTalk().getTalkInfo().toObject().talkId) {
+          if (talks.value[idx].talkId === resp.getReload().getTalk().getTalkInfo().getTalkId()) {
             let messages = []
             resp.getReload().getTalk().getMessagesList().forEach(function (message) {
               const messageObject = message.toObject();
@@ -159,8 +195,8 @@ export default {
               }
               messages.push(messageObject)
             })
-            talks.value[idx].messages =  talks.value[idx].messages || [];
-            talks.value[idx].messages = messages
+            talks.value[idx].messages = messages || [];
+
             break
           }
         }
@@ -177,17 +213,29 @@ export default {
               talks.value[idx].unreadMessageCount++
             }
             talks.value[idx].messages.push(messageObject)
+
+            break
           }
         }
+      } else if (resp.getKickOut() != null) {
+        openNotification(resp.getKickOut().getCode() + ": " + resp.getKickOut().getMessage())
+      } else if (resp.getNotify() != null) {
+        openNotification('服务端消息：', resp.getNotify().getMsg())
+      } else if (resp.getClose() != null) {
+        talkClosed(resp.getClose().getTalkId())
       }
 
       console.log('resp:', resp.toObject())
     })
 
+    //
+    // provider
+    //
+
     const lockTalk = (item) => {
-      const request = new ServiceRequest();
       const attach = new ServiceAttachRequest()
       attach.setTalkId(item.talkId);
+      const request = new ServiceRequest();
       request.setAttach(attach);
       ws.send(request.serializeBinary().buffer)
     }
@@ -195,28 +243,14 @@ export default {
     provide('LockTalk', lockTalk)
 
     const unlockTalk =  (item) => {
-      const request = new ServiceRequest();
       const detach = new ServiceDetachRequest()
       detach.setTalkId(item.talkId);
+      const request = new ServiceRequest();
       request.setDetach(detach);
       ws.send(request.serializeBinary().buffer)
     }
+
     provide('UnlockTalk', unlockTalk)
-
-    const activatedTalkMessages = ref([]);
-
-    const activatedTalkId = ref('');
-
-    const activeTalkChanged = (talkId) => {
-      activatedTalkId.value = talkId;
-
-      talks.value.forEach(function (item) {
-        if (item.talkId === talkId) {
-          item.unreadMessageCount = 0
-          activatedTalkMessages.value = item.messages;
-        }
-      })
-    }
 
     const sendMessage = (talkId, text, image) => {
       const message = new TalkMessageW();
@@ -236,6 +270,40 @@ export default {
       ws.send(request.serializeBinary().buffer)
     }
     provide('SendMessage', sendMessage)
+
+    //
+    //
+    //
+
+    const activatedTalkMessages = ref([]);
+    const activatedTalkId = ref('');
+
+    const activeTalkChanged = (talkId) => {
+      activatedTalkId.value = talkId;
+
+      talks.value.forEach(function (item) {
+        if (item.talkId === talkId) {
+          item.unreadMessageCount = 0
+          activatedTalkMessages.value = item.messages;
+        }
+      })
+    }
+
+    //
+    //
+    //
+
+    onActivated(()=>{
+      ws.startConnect()
+    })
+
+    onDeactivated(()=>{
+      ws.finishConnect()
+    })
+
+    //
+    //
+    //
 
     return {
       talks,

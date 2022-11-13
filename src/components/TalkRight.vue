@@ -31,6 +31,12 @@
             </a-col>
           </a-row>
         </a-form-item>
+        <a-form-item>
+          <div>
+            <a-button type="primary" class="subElement" @click="handleSubmit" >发送</a-button>
+            <a-button type="primary" class="subElement" danger ghost @click="handleCloseTalk" v-if="fnCloseTalk">结束会话</a-button>
+          </div>
+        </a-form-item>
       </template>
     </a-comment>
   </perfect-scrollbar>
@@ -58,6 +64,7 @@ export default {
     const messageInput = ref();
 
     const fnSendMessage = inject('SendMessage')
+    const fnCloseTalk = inject('CloseTalk')
 
     const comments = ref([]);
     const submitting = ref(false);
@@ -70,6 +77,10 @@ export default {
       fnSendMessage(props.talkId, message.value, "")
       message.value = ""
     };
+
+    const handleCloseTalk = () => {
+      fnCloseTalk()
+    }
 
 
     const readAndUpload = (file) => {
@@ -145,6 +156,9 @@ export default {
       messageTitle,
       messageContainer,
       messageInput,
+      handleSubmit,
+      handleCloseTalk,
+      fnCloseTalk,
     };
   }
 }
@@ -153,5 +167,8 @@ export default {
 <style scoped>
 .message {
   height:100%;
+}
+.subElement {
+  margin: 10px;
 }
 </style>

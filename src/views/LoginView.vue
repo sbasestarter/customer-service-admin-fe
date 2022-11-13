@@ -17,12 +17,13 @@
 <script>
 import {getCurrentInstance, reactive} from "vue";
 import {useStore} from "vuex";
+import {useRouter} from "vue-router";
 
 export default {
   name: 'LoginView',
   setup() {
     const instance = getCurrentInstance();
-    const _this= instance.appContext.config.globalProperties;
+    const ctx = instance.appContext.config.globalProperties;
 
     const formState = reactive({
       username: '',
@@ -30,9 +31,10 @@ export default {
     });
 
     const store = useStore();
+    const router = useRouter()
 
     const doLogin = () => {
-      _this.$axios({
+      ctx.$axios({
         method: "post",
         url: process.env.VUE_APP_URL_BASE_SERVICER+"/login",
         responseType: 'json',
@@ -42,6 +44,7 @@ export default {
         },
       }).then((resp)=> {
         store.commit('servicerToken', resp.data.token)
+        router.push('/')
       })
     }
 
@@ -71,7 +74,6 @@ label{
   left: 0;
   right: 0;
   margin: 0 auto;
-  border: 1px solid blue ;
   width: 40%;
   padding: 5px;
   text-align: center;

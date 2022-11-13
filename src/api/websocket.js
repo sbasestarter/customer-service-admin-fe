@@ -14,6 +14,7 @@ export default class SocketService {
     return this.customerInstance;
   }
 
+  connectStarted = true
   ws = null;
   callBackMapping = {};
   connected = false;
@@ -34,15 +35,33 @@ export default class SocketService {
       this.token = token;
     }
 
-    this.startConnect()
+    this.innerConnect()
+  }
+
+  finishConnect() {
+    this.connectStarted = false
+
+    if (this.ws) {
+      this.ws.close()
+      this.ws = null
+    }
   }
 
   startConnect() {
+    this.connectStarted = true
+    this.innerConnect()
+  }
+
+  innerConnect() {
     if (!window.WebSocket) {
       return console.log('您的浏览器不支持WebSocket');
     }
 
     if (this.ws) {
+      return
+    }
+
+    if (!this.connectStarted) {
       return
     }
 
@@ -67,23 +86,29 @@ export default class SocketService {
       }
     };
 
-    this.ws.onclose = () => {
-      const cb =  this.callBackMapping['close'];
-      if (cb !== undefined) {
-        cb()
+    this.ws.onclose = (e) => {
+      const ws = this.ws
+      if (!ws) {
+        return
       }
 
-      console.log('连接服务端失败了');
+      const cb =  this.callBackMapping['close'];
+      if (cb !== undefined) {
+        cb(e)
+      }
+
+      console.log('连接服务端失败了[Close]', e);
       this.connected = false;
       this.connectRetryCount++;
 
-      if (this.ws.readyState === WebSocket.CLOSED) {
-        this.ws.close();
+      if (ws.readyState === WebSocket.CLOSED) {
+        ws.close();
         this.ws = null;
       }
+
       setTimeout(() => {
-        this.connect(this.wsUrl, this.token);
-      }, 500 * this.connectRetryCount);
+        this.innerConnect();
+      }, 2000 * this.connectRetryCount);
     };
 
     this.ws.onerror = (e) => {

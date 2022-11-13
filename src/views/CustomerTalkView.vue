@@ -1,7 +1,7 @@
 <template>
   <div>Hi, {{ userName }}</div>
   <div>
-    <TalkRight v-if="userName !== null" :talk-id="talkId" :messages-in="messages" :customer-mode="true" />
+    <TalkRight v-if="userName !== null && !newCreateFlag" :talk-id="talkId" :messages-in="messages" :customer-mode="true" />
     <e-row v-else>
       <a-form>
         <a-form-item label="您的称呼" name="username">
@@ -27,14 +27,15 @@ import {
   CheckTokenResponse,
   CreateTokenRequest,
   CreateTokenResponse,
-  QueryTalksResponse,
+  QueryTalksResponse, TalkClose,
   TalkCreateRequest, TalkMessageW,
   TalkOpenRequest,
   TalkRequest,
   TalkResponse,
 } from "../../js/customer_talk_service_pb";
 import SocketService from "@/api/websocket";
-import {notification} from "ant-design-vue";
+import {notification,message} from "ant-design-vue";
+import {useStore} from "vuex";
 
 export default {
   name: 'HomeView',
@@ -51,13 +52,18 @@ export default {
       });
     };
 
-    let token = ref('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MTg1MjI3MTAxOTQxNTMwNjI0MCwiVXNlck5hbWUiOiJoaCIsImV4cCI6MTY3MDY1MzY3M30.clrY5X8b5aIgX-wjAORqnEJu8U50pI-n37FKvnAdJes');
+    const token = ref('');
     const userName = ref(null);
     const talkId = ref('');
-    let messages = ref([]);
+    const messages = ref([]);
+    const newCreateFlag = ref(false);
 
     const instance = getCurrentInstance();
-    const _this= instance.appContext.config.globalProperties;
+    const ctx = instance.appContext.config.globalProperties;
+
+    //
+    //
+    //
 
     const parentMessage = (e) => {
       if (e.data['target'] === 'customer') {
@@ -68,8 +74,8 @@ export default {
       }
     }
 
+
     onMounted(() => {
-      console.log("..", userName.value)
       nextTick(() => {
         window.addEventListener('message', parentMessage);
       });
@@ -81,20 +87,71 @@ export default {
     });
 
 
-    const createToken = () => {
-      if (formState.username === "") {
-        alert("null username");
+    //
+    //
+    //
 
-        return
+    const store = useStore();
+    const formState = reactive({
+      username: store.getters.customerUsername,
+      title: '',
+    });
+
+    const startTalk = () => {
+      ctx.$axios({
+        method: "get",
+        headers: {
+          'token': token.value,
+        },
+        url: process.env.VUE_APP_URL_BASE_CUSTOMER+"/listTalk",
+      }).then((resp)=>{
+        const pbResp = QueryTalksResponse.deserializeBinary(resp.data)
+        const pbTalkList = pbResp.getTalksList();
+        if (pbTalkList.length > 0) {
+          talkId.value = pbTalkList[0].getTalkId();
+          const open = new TalkOpenRequest();
+          open.setTalkId(talkId.value);
+          talkStartRequest.setOpen(open);
+          ws.startConnect()
+        } else {
+          if (formState.title === '') {
+            newCreateFlag.value = true
+            ws.finishConnect()
+
+            return
+          }
+
+          const create = new TalkCreateRequest();
+          create.setTitle(formState.title);
+          talkStartRequest.setCreate(create);
+          ws.startConnect()
+        }
+
+        ws.connect(token.value)
+      }).catch(e => {
+        message.error('startTalk:', e)
+      })
+    }
+
+    const createToken = () => {
+      if (formState.title === '') {
+        formState.title = '咨询'
+      }
+
+      if (formState.username !== '') {
+        store.commit('customerUsername', formState.username)
       }
 
       const req = new CreateTokenRequest();
       req.setUserName(formState.username);
-      _this.$axios({
+
+      ctx.$axios({
         method: "post",
         url: process.env.VUE_APP_URL_BASE_CUSTOMER+"/createToken",
         data: req.serializeBinary().buffer,
       }).then((resp)=> {
+        newCreateFlag.value = false
+
         const pbResp = CreateTokenResponse.deserializeBinary(resp.data)
         token.value = pbResp.getToken()
         userName.value = pbResp.getUserName()
@@ -102,12 +159,13 @@ export default {
           'token': pbResp.getToken(),
           target: 'customer',
         }, '*')
+
         startTalk()
       })
     }
 
     const queryToken = () => {
-      _this.$axios({
+      ctx.$axios({
         method: "get",
         headers: {
           'token': token.value,
@@ -115,23 +173,23 @@ export default {
         url: process.env.VUE_APP_URL_BASE_CUSTOMER+"/checkToken",
       }).then((resp)=>{
         const pbResp = CheckTokenResponse.deserializeBinary(resp.data)
-        console.log("checkToken:", pbResp.getNewToken(), pbResp.getUserName(), pbResp.getValid())
         if (pbResp.getValid()) {
           token.value = pbResp.getNewToken();
-          userName.value = pbResp.getUserName()
+          userName.value = pbResp.getUserName();
+
           window.parent.postMessage({
             'token': pbResp.getNewToken(),
             target: 'customer',
           }, '*')
+
           startTalk()
         }
       }).catch(e => {
-        console.log("eee:", e)
+        message.error(e)
       })
     }
 
     const talkStartRequest = new TalkRequest();
-
     const ws = reactive(new SocketService(process.env.VUE_APP_WS_CUSTOMER, ''));
 
     ws.registerCallBack('open', () => {
@@ -139,8 +197,8 @@ export default {
       ws.send(talkStartRequest.serializeBinary().buffer)
     })
 
-    ws.registerCallBack('close', () => {
-      openNotification('通道关闭')
+    ws.registerCallBack('close', (e) => {
+      openNotification('通道关闭. ' + e.code + ": " +e.reason)
     })
 
     ws.registerCallBack('message', (message) => {
@@ -163,42 +221,13 @@ export default {
         }
         messages.value.push(messageObject)
       }
+
       console.log("resp:", resp.toObject())
     })
 
-    const formState = reactive({
-      username: '',
-      title: '',
-    });
-
-    const startTalk = () => {
-      _this.$axios({
-        method: "get",
-        headers: {
-          'token': token.value,
-        },
-        url: process.env.VUE_APP_URL_BASE_CUSTOMER+"/listTalk",
-      }).then((resp)=>{
-        const pbResp = QueryTalksResponse.deserializeBinary(resp.data)
-        const pbTalkList = pbResp.getTalksList();
-        if (pbTalkList.length > 0) {
-          talkId.value = pbTalkList[0].getTalkId();
-          const open = new TalkOpenRequest();
-          open.setTalkId(talkId.value);
-          talkStartRequest.setOpen(open);
-          console.log('open ...')
-        } else {
-          const create = new TalkCreateRequest();
-          create.setTitle(formState.title);
-          talkStartRequest.setCreate(create);
-          console.log('create ...')
-        }
-
-        ws.connect(token.value)
-      }).catch(e => {
-        console.log("eee:", e)
-      })
-    }
+    //
+    //
+    //
 
     const sendMessage = (talkId, text, image) => {
       const message = new TalkMessageW();
@@ -215,6 +244,24 @@ export default {
     }
     provide('SendMessage', sendMessage)
 
+    const closeTalk = () => {
+      const request = new TalkRequest();
+      request.setClose(new TalkClose())
+
+      ws.send(request.serializeBinary().buffer)
+      ws.finishConnect()
+
+      formState.title = ''
+      newCreateFlag.value = true
+      token.value = ''
+      userName.value = ''
+    }
+    provide('CloseTalk', closeTalk)
+
+    //
+    //
+    //
+
     return {
       formState,
       queryToken,
@@ -223,7 +270,8 @@ export default {
       startTalk,
       talkId,
       messages,
-      parentMessage
+      parentMessage,
+      newCreateFlag
     }
   }
 }
