@@ -23,3 +23,5 @@ pnpm-debug.log*
 *.sw?
 
 /js
+/dist.tgz
+/dist
