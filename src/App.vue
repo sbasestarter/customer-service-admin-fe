@@ -22,4 +22,10 @@
   height: 96vh;
   overflow: auto scroll;
 }
+
+@media (max-width: 700px) {
+  .ant-comment-avatar {
+    margin-right:0 !important;
+  }
+}
 </style>

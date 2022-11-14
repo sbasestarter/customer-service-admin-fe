@@ -4,17 +4,17 @@
                  :message="message.text" :image="message.image" />
 
     <a-comment>
-      <template #avatar>
+      <template v-if="!smallMedia" #avatar>
         <a-avatar src="https://joeschmoe.io/api/v1/random" alt="Han Solo" />
       </template>
       <template #content>
         <a-form-item>
           <a-row>
-            <a-col :xs="24" :sm="24" :md="18" :xl="18">
-              <a-textarea class="message" v-model:value="message" :rows="4" @paste="fileChange" draggable="true" v-focus
+            <a-col :xs="24" :sm="18" :md="18" :xl="18">
+              <a-textarea class="message" v-model:value="message" :rows="smallMedia?1:4" @paste="fileChange" draggable="true" v-focus
                           ref="messageInput" @keydown.enter="handleEnter" />
             </a-col>
-            <a-col :xs="24" :sm="24" :md="6" :xl="6">
+            <a-col :xs="0" :sm="6" :md="6" :xl="6">
               <a-upload-dragger
                   name="file"
                   :before-upload="beforeUpload"
@@ -31,7 +31,7 @@
             </a-col>
           </a-row>
         </a-form-item>
-        <a-form-item>
+        <a-form-item v-if="!smallMedia">
           <div>
             <a-button type="primary" class="subElement" @click="handleSubmit" >发送</a-button>
             <a-button type="primary" class="subElement" danger ghost @click="handleCloseTalk" v-if="fnCloseTalk">结束会话</a-button>
@@ -145,6 +145,12 @@ export default {
       handleSubmit()
     }
 
+    const smallMedia = ref(false)
+    const mQuery = window.matchMedia('(max-width: 300px)')
+    smallMedia.value = mQuery.matches
+    mQuery.addListener((e) => {
+      smallMedia.value = e.matches
+    })
     return {
       comments,
       submitting,
@@ -159,6 +165,7 @@ export default {
       handleSubmit,
       handleCloseTalk,
       fnCloseTalk,
+      smallMedia,
     };
   }
 }

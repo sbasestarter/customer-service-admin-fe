@@ -1,23 +1,23 @@
 <template>
-  <div>Hi, {{ userName }}</div>
-  <div>
-    <TalkRight v-if="userName !== null && !newCreateFlag" :talk-id="talkId" :messages-in="messages" :customer-mode="true" />
-    <e-row v-else>
-      <a-form>
-        <a-form-item label="您的称呼" name="username">
-          <a-input v-model:value="formState.username" />
-        </a-form-item>
-        <a-form-item label="问题描述" name="title">
-          <a-input v-model:value="formState.title" />
-        </a-form-item>
-        <a-form-item>
-          <a-button type="primary" @click="createToken">Submit</a-button>
-        </a-form-item>
-      </a-form>
-    </e-row>
-
+  <div class="home4h">
+    <div v-if="userName" style="position: fixed;top:0; ">Hello, {{ userName }}</div>
+    <div>
+      <TalkRight v-if="userName !== null && !newCreateFlag" :talk-id="talkId" :messages-in="messages" :customer-mode="true" />
+      <e-row v-else>
+        <a-form>
+          <a-form-item label="您的称呼" name="username">
+            <a-input v-model:value="formState.username" />
+          </a-form-item>
+          <a-form-item label="问题描述" name="title">
+            <a-input v-model:value="formState.title" />
+          </a-form-item>
+          <a-form-item>
+            <a-button type="primary" @click="createToken">Submit</a-button>
+          </a-form-item>
+        </a-form>
+      </e-row>
+    </div>
   </div>
-
 </template>
 
 <script>
@@ -34,7 +34,7 @@ import {
   TalkResponse,
 } from "../../js/customer_talk_service_pb";
 import SocketService from "@/api/websocket";
-import {notification,message} from "ant-design-vue";
+import {message} from "ant-design-vue";
 import {useStore} from "vuex";
 
 export default {
@@ -43,15 +43,6 @@ export default {
     TalkRight
   },
   setup() {
-    const socketNotificationKey = 'wsNotification';
-    const openNotification = (message) => {
-      notification.open({
-        socketNotificationKey,
-        message: '会话通道状态改变',
-        description: message,
-      });
-    };
-
     const token = ref('');
     const userName = ref(null);
     const talkId = ref('');
@@ -192,13 +183,12 @@ export default {
     const talkStartRequest = new TalkRequest();
     const ws = reactive(new SocketService(process.env.VUE_APP_WS_CUSTOMER, ''));
 
+
     ws.registerCallBack('open', () => {
-      openNotification('通道打开')
       ws.send(talkStartRequest.serializeBinary().buffer)
     })
 
-    ws.registerCallBack('close', (e) => {
-      openNotification('通道关闭. ' + e.code + ": " +e.reason)
+    ws.registerCallBack('close', () => {
     })
 
     ws.registerCallBack('message', (message) => {
